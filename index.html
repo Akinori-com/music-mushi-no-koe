@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>むしのこえ 楽器マッチング</title>
+    <meta name="description" content="むしのこえ — 昆虫の鳴き声のイメージに合う楽器を選ぼう！知的特別支援学校向け視覚支援教材">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kosugi+Maru&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --clr-bg:         #f0f7ec;
+            --clr-header:     #2d6a4f;
+            --clr-header2:    #40916c;
+            --clr-play-hd:    #1d3557;
+            --clr-play-hd2:   #457b9d;
+            --clr-insect-bd:  #95d5b2;
+            --clr-drop-bd:    #b7e4c7;
+            --clr-drop-bg:    #f8fff8;
+            --clr-hl-bd:      #52b788;
+            --clr-hl-bg:      #d8f3dc;
+            --clr-sel-bd:     #2196f3;
+            --clr-sel-bg:     #e3f2fd;
+            --clr-placed-bd:  #f4a261;
+            --clr-placed-bg:  #fff3e0;
+            --clr-palette:    #fff8e1;
+            --clr-palette-bd: #f4a261;
+            --shadow-card:    0 4px 16px rgba(0,0,0,0.10);
+            --radius-card:    20px;
+            --font: "Kosugi Maru", sans-serif;
+        }
+        html, body {
+            width: 100%; height: 100%;
+            overflow: hidden;
+            font-family: var(--font);
+            background: var(--clr-bg);
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        #app { display: flex; flex-direction: column; width: 100%; height: 100%; position: relative; }
+
+        .page {
+            display: none;
+            flex-direction: column;
+            width: 100%; height: 100%;
+            overflow: hidden;
+        }
+        .page.active { display: flex; }
+
+        /* ---- ページ1: 楽器えらび画面 ---- */
+        #page-select header {
+            flex: 0 0 auto;
+            background: linear-gradient(135deg, var(--clr-header) 0%, var(--clr-header2) 100%);
+            padding: 10px 16px;
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.18);
+            z-index: 10;
+        }
+        .app-title {
+            font-size: clamp(1.2rem, 3.2vw, 1.8rem); font-weight: 900; color: #fff;
+            letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px; white-space: nowrap;
+        }
+        .header-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+        .mode-switcher {
+            display: flex; background: rgba(255,255,255,0.15); border-radius: 50px; padding: 4px; gap: 4px;
+        }
+        .mode-btn {
+            padding: 7px 16px; border: none; border-radius: 50px; font-family: var(--font);
+            font-size: clamp(0.8rem, 1.8vw, 1rem); font-weight: 700; cursor: pointer;
+            transition: background 0.2s, color 0.2s, transform 0.15s;
+            color: rgba(255,255,255,0.75); background: transparent; white-space: nowrap;
+        }
+        .mode-btn.active { background: #fff; color: var(--clr-header); transform: scale(1.03); }
+        .mode-btn:active { transform: scale(0.96); }
+
+        .btn-ui {
+            padding: 8px 16px; border: 2px solid rgba(255,255,255,0.5); border-radius: 50px;
+            font-family: var(--font); font-size: clamp(0.8rem, 1.8vw, 1rem); font-weight: 700;
+            cursor: pointer; background: rgba(255,255,255,0.2); color: #fff; white-space: nowrap;
+            transition: background 0.2s, transform 0.15s;
+        }
+        .btn-ui:active { transform: scale(0.96); }
+
+        .btn-go-play {
+            background: #ffb703; border: 2px solid #fb8500; color: #5a3000;
+            font-size: clamp(0.9rem, 2vw, 1.15rem); font-weight: 900;
+            box-shadow: 0 4px 12px rgba(251,133,0,0.35);
+            animation: pulse-btn 1.8s infinite ease-in-out;
+        }
+        @keyframes pulse-btn {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .btn-go-play:active { transform: scale(0.95); animation: none; }
+
+        /* 昆虫エリア */
+        #select-main {
+            flex: 1 1 0; overflow: hidden;
+            padding: 12px 10px; display: flex; align-items: center; justify-content: center;
+        }
+        #insects-container {
+            display: flex; flex-wrap: nowrap; justify-content: center; gap: 14px;
+            width: 100%; max-width: 1100px;
+        }
+        .insect-card {
+            background: #fff; border: 3px solid var(--clr-insect-bd);
+            border-radius: var(--radius-card); box-shadow: var(--shadow-card);
+            display: flex; flex-direction: column; align-items: center;
+            overflow: hidden; width: clamp(140px, 22vw, 210px); flex-shrink: 1;
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        @keyframes sound-pulse {
+            0%   { transform: scale(1);    box-shadow: var(--shadow-card); }
+            50%  { transform: scale(1.04); box-shadow: 0 8px 28px rgba(82,183,136,0.45); }
+            100% { transform: scale(1);    box-shadow: var(--shadow-card); }
+        }
+        .insect-card.playing { animation: sound-pulse 0.7s ease-in-out infinite; border-color: #52b788; }
+        .insect-img-area {
+            width: 100%; background: #f1faf3;
+            display: flex; flex-direction: column; align-items: center;
+            cursor: pointer; padding-bottom: 6px; transition: background 0.15s;
+        }
+        .insect-img-area:active { background: #d8f3dc; }
+        .insect-img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; max-height: 120px; }
+        .sound-btn {
+            margin-top: 4px; padding: 4px 10px; background: var(--clr-header2); color: #fff;
+            border-radius: 50px; font-family: var(--font); font-size: clamp(0.7rem, 1.5vw, 0.82rem);
+            font-weight: 700; display: flex; align-items: center; gap: 4px; pointer-events: none;
+        }
+        .insect-name {
+            width: 100%; text-align: center; padding: 5px 4px;
+            font-size: clamp(0.95rem, 2vw, 1.2rem); font-weight: 700;
+            color: #1b4332; background: #d8f3dc;
+        }
+
+        /* ドロップゾーン */
+        .dropzone {
+            width: 86%; aspect-ratio: 1; margin: 8px auto; max-height: 130px;
+            border-radius: 14px; border: 3px dashed var(--clr-drop-bd); background: var(--clr-drop-bg);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: border-color 0.2s, background 0.2s, transform 0.2s;
+            overflow: hidden;
+        }
+        .drop-placeholder { font-size: clamp(1.8rem, 4vw, 2.5rem); color: #b7e4c7; pointer-events: none; font-weight: 700; }
+        .placed-img { width: 100%; height: 100%; object-fit: contain; padding: 6px; pointer-events: none; }
+        .dropzone.highlight { border-color: var(--clr-hl-bd); background: var(--clr-hl-bg); border-style: solid; }
+        .dropzone.selected  { border-color: var(--clr-sel-bd) !important; background: var(--clr-sel-bg) !important; border-style: solid !important; transform: scale(1.05); }
+        .dropzone.has-item  { border-color: var(--clr-placed-bd); background: var(--clr-placed-bg); border-style: solid; }
+
+        /* フッター（楽器パレット） */
+        #select-footer {
+            flex: 0 0 auto; background: var(--clr-palette);
+            border-top: 4px solid var(--clr-palette-bd);
+            padding: 8px 12px 10px; box-shadow: 0 -4px 14px rgba(0,0,0,0.10); z-index: 10;
+        }
+        #palette-message {
+            text-align: center; font-size: clamp(0.85rem, 1.8vw, 1.05rem);
+            font-weight: 700; color: #7c4a00; margin-bottom: 6px;
+        }
+        #instruments-container {
+            display: flex; overflow-x: auto; gap: 14px; padding: 2px 4px 4px;
+            justify-content: center; align-items: flex-end;
+            scrollbar-width: none; -ms-overflow-style: none;
+        }
+        .instrument-card {
+            background: #fff; border: 3px solid #ffe08a; border-radius: 16px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.09);
+            display: flex; flex-direction: column; align-items: center;
+            padding: 8px 8px 6px; flex-shrink: 0;
+            width: clamp(110px, 16vw, 150px);
+            height: clamp(120px, 16vw, 150px);
+            cursor: grab; transition: transform 0.15s, box-shadow 0.15s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .instrument-card:active { transform: scale(0.95); cursor: grabbing; }
+        .instrument-card.tap-mode { cursor: pointer; }
+        .instrument-img {
+            width: 100%; flex: 1 1 0; min-height: 0;
+            object-fit: contain; pointer-events: none; display: block;
+        }
+        .instrument-name {
+            font-size: clamp(0.8rem, 1.8vw, 0.95rem); font-weight: 700; color: #5a3e00;
+            text-align: center; margin-top: 4px; pointer-events: none;
+            white-space: pre-line; line-height: 1.2; flex-shrink: 0;
+        }
+
+        /* ---- ページ2: 演奏画面 ---- */
+        #page-play header {
+            flex: 0 0 auto;
+            background: linear-gradient(135deg, var(--clr-play-hd) 0%, var(--clr-play-hd2) 100%);
+            padding: 8px 16px;
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.18);
+            z-index: 10;
+        }
+        .speed-control-group {
+            display: flex; background: rgba(255,255,255,0.15); border-radius: 50px; padding: 3px; gap: 4px;
+        }
+        .speed-btn {
+            padding: 6px 14px; border: none; border-radius: 50px; font-family: var(--font);
+            font-size: clamp(0.75rem, 1.6vw, 0.92rem); font-weight: 700; cursor: pointer;
+            color: rgba(255,255,255,0.8); background: transparent; white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .speed-btn.active { background: #ffb703; color: #3d2300; font-weight: 900; }
+        .speed-btn:active { transform: scale(0.95); }
+
+        .btn-play-action {
+            padding: 8px 18px; border-radius: 50px; border: none;
+            font-family: var(--font); font-size: clamp(0.9rem, 2vw, 1.15rem); font-weight: 900;
+            cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2); transition: transform 0.15s, background 0.2s;
+        }
+        .btn-play-action:active { transform: scale(0.95); }
+        #btn-play-pause { background: #48cae4; color: #03045e; }
+        #btn-play-pause.is-playing { background: #f77f00; color: #fff; }
+        #btn-play-restart { background: rgba(255,255,255,0.25); color: #fff; border: 2px solid rgba(255,255,255,0.5); }
+
+        /* 演奏メイン画面 */
+        #play-main {
+            flex: 1 1 0; overflow: hidden; position: relative;
+            padding: 12px; display: flex; gap: 16px; align-items: stretch; justify-content: center;
+        }
+        /* 歌詞画像表示エリア */
+        #lyrics-card-wrapper {
+            flex: 1 1 65%;
+            background: #fff; border: 4px solid #a8dadc; border-radius: 24px;
+            box-shadow: var(--shadow-card); display: flex; flex-direction: column;
+            overflow: hidden; position: relative;
+        }
+        #lyrics-header-badge {
+            background: #e0f2f1; color: #004d40; padding: 6px 16px;
+            font-size: clamp(0.9rem, 2vw, 1.25rem); font-weight: 900;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        #lyrics-image-container {
+            flex: 1 1 0; position: relative; display: flex; align-items: center; justify-content: center;
+            background: #fafafa; overflow: hidden; padding: 8px;
+        }
+        #lyrics-image {
+            max-width: 100%; max-height: 100%; object-fit: contain;
+            border-radius: 12px; transition: opacity 0.3s ease;
+        }
+        #lyrics-fallback-text {
+            font-size: clamp(1.2rem, 3.5vw, 2.2rem); font-weight: 900; color: #1d3557;
+            text-align: center; line-height: 1.6; white-space: pre-line; padding: 20px;
+        }
+
+        /* 演奏サイドパネル（選んだ楽器表示） */
+        #current-instrument-panel {
+            flex: 0 0 clamp(180px, 28vw, 300px);
+            background: #fff8e7; border: 4px solid #f4a261; border-radius: 24px;
+            box-shadow: var(--shadow-card); display: flex; flex-direction: column;
+            align-items: center; padding: 12px; position: relative; overflow: hidden;
+        }
+        .current-inst-title {
+            font-size: clamp(0.95rem, 2vw, 1.25rem); font-weight: 900; color: #7c4a00;
+            text-align: center; margin-bottom: 8px;
+        }
+        #active-inst-badge {
+            flex: 1 1 0; width: 100%; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            background: #fff; border-radius: 18px; border: 3px solid #f4a261;
+            padding: 10px; text-align: center; gap: 8px;
+            transition: all 0.3s ease;
+        }
+        @keyframes active-play-pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(244,162,97,0.7); }
+            50% { transform: scale(1.04); box-shadow: 0 0 20px 8px rgba(244,162,97,0.5); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(244,162,97,0.7); }
+        }
+        #active-inst-badge.is-playing-beat {
+            animation: active-play-pulse 0.9s infinite ease-in-out;
+            border-color: #e76f51; background: #fffdf5;
+        }
+        #active-inst-img {
+            width: 80%; max-height: 140px; aspect-ratio: 1; object-fit: contain; display: block;
+        }
+        #active-inst-name {
+            font-size: clamp(1.1rem, 2.8vw, 1.7rem); font-weight: 900; color: #d9480f;
+        }
+        #active-inst-subtext {
+            font-size: clamp(0.75rem, 1.6vw, 0.95rem); font-weight: 700; color: #6c757d;
+        }
+        /* 全員合奏時の複数楽器表示 */
+        #active-all-instruments {
+            display: none; width: 100%; flex: 1 1 0; flex-direction: column;
+            align-items: center; justify-content: space-evenly; gap: 6px;
+        }
+        .all-inst-item {
+            display: flex; align-items: center; gap: 8px; width: 95%;
+            background: #fff; border: 2px solid #ffd166; border-radius: 12px; padding: 4px 8px;
+        }
+        .all-inst-item img { width: 36px; height: 36px; object-fit: contain; }
+        .all-inst-item span { font-weight: 900; font-size: 0.95rem; color: #5a3e00; }
+
+        /* 演奏フッター（再生バー） */
+        #play-footer {
+            flex: 0 0 auto; background: #1d3557; color: #fff;
+            padding: 8px 16px 12px; display: flex; flex-direction: column; gap: 6px;
+            z-index: 10;
+        }
+        .progress-bar-wrap {
+            width: 100%; height: 12px; background: rgba(255,255,255,0.2);
+            border-radius: 50px; overflow: hidden; position: relative; cursor: pointer;
+        }
+        #play-progress-fill {
+            height: 100%; width: 0%; background: linear-gradient(90deg, #ffb703, #fb8500);
+            border-radius: 50px; transition: width 0.1s linear;
+        }
+        .progress-time-info {
+            display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; opacity: 0.85;
+        }
+
+        /* 共通アニメーション・吹き出し */
+        #tap-guide {
+            display: none; position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%);
+            background: #e76f51; color: #fff; font-family: var(--font); font-size: 1rem;
+            font-weight: 700; padding: 10px 20px; border-radius: 50px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.2); z-index: 200; white-space: nowrap;
+            animation: pop-in 0.25s ease;
+        }
+        #tap-guide::after {
+            content: ""; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
+            border: 10px solid transparent; border-top-color: #e76f51; border-bottom: none;
+        }
+        @keyframes pop-in {
+            from { opacity: 0; transform: translateX(-50%) scale(0.85); }
+            to   { opacity: 1; transform: translateX(-50%) scale(1); }
+        }
+        @keyframes place-bounce {
+            0%   { transform: scale(0.7); }
+            70%  { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .placed-img.bounce { animation: place-bounce 0.35s ease; }
+    </style>
+</head>
+<body>
+<div id="app">
+
+    <!-- ==========================================================
+         ページ1: 楽器えらび画面
+         ========================================================== -->
+    <div id="page-select" class="page active">
+        <header>
+            <h1 class="app-title">🎵 むしのこえ</h1>
+            <div class="header-controls">
+                <div class="mode-switcher">
+                    <button id="btn-mode-drag" class="mode-btn active">👆 ドラッグ</button>
+                    <button id="btn-mode-tap"  class="mode-btn">🔘 タップ</button>
+                </div>
+                <button id="btn-reset" class="btn-ui">🔄 やりなおす</button>
+                <button id="btn-to-play" class="btn-ui btn-go-play">えんそうへ すすむ ➡️</button>
+            </div>
+        </header>
+        <main id="select-main">
+            <div id="insects-container"></div>
+        </main>
+        <footer id="select-footer">
+            <p id="palette-message"></p>
+            <div id="instruments-container"></div>
+        </footer>
+    </div>
+
+    <!-- ==========================================================
+         ページ2: 演奏画面
+         ========================================================== -->
+    <div id="page-play" class="page">
+        <header>
+            <button id="btn-back-to-select" class="btn-ui">⬅️ がっきを えらぶ</button>
+            <h1 class="app-title">🎵 えんそうしよう！</h1>
+            <div class="header-controls">
+                <div class="speed-control-group">
+                    <button class="speed-btn" data-speed="0.8">🐢 ゆっくり (0.8)</button>
+                    <button class="speed-btn active" data-speed="1.0">🚶 ふつう (1.0)</button>
+                    <button class="speed-btn" data-speed="1.2">🐇 はやい (1.2)</button>
+                </div>
+                <button id="btn-play-pause" class="btn-play-action">▶️ さいせい</button>
+                <button id="btn-play-restart" class="btn-play-action">🔄 最初から</button>
+            </div>
+        </header>
+        <main id="play-main">
+            <!-- 歌詞画像スライド -->
+            <div id="lyrics-card-wrapper">
+                <div id="lyrics-header-badge">
+                    <span id="phrase-badge-title">🎵 じゅんび中</span>
+                    <span id="phrase-badge-speed">はやさ: 1.0倍</span>
+                </div>
+                <div id="lyrics-image-container">
+                    <img id="lyrics-image" src="images/lyrics/1.png" alt="歌詞画像" style="display:none;">
+                    <div id="lyrics-fallback-text"></div>
+                </div>
+            </div>
+
+            <!-- 現在の担当楽器表示サイドパネル -->
+            <div id="current-instrument-panel">
+                <div class="current-inst-title">🔔 いま ならす がっき</div>
+                
+                <div id="active-inst-badge">
+                    <img id="active-inst-img" src="images/instruments/suzu.png" alt="がっき">
+                    <div id="active-inst-name">がっきのなまえ</div>
+                    <div id="active-inst-subtext">ならすタイミングだよ！</div>
+                </div>
+
+                <!-- 合奏時の全楽器リスト -->
+                <div id="active-all-instruments"></div>
+            </div>
+        </main>
+        <footer id="play-footer">
+            <div class="progress-bar-wrap" id="progress-container">
+                <div id="play-progress-fill"></div>
+            </div>
+            <div class="progress-time-info">
+                <span id="current-time-display">0:00</span>
+                <span id="phrase-current-name">曲を再生してね</span>
+                <span id="total-time-display">1:33</span>
+            </div>
+        </footer>
+    </div>
+
+</div>
+<div id="tap-guide">さきに むし の わく を タップしてね！</div>
+
+<script>
+/* ================================================================
+ * 【先生向け設定エリア】
+ * ================================================================ */
+
+// 昆虫リスト（4種類）
+const insectsData = [
+    { id: 'matsumushi',   name: 'まつむし',   image: 'images/insects/matsumushi.png',   sound: 'sounds/matsumushi.mp3'   },
+    { id: 'suzumushi',    name: 'すずむし',   image: 'images/insects/suzumushi.png',    sound: 'sounds/suzumushi.mp3'    },
+    { id: 'kutsuwamushi', name: 'くつわむし', image: 'images/insects/kutsuwamushi.png', sound: 'sounds/kutsuwamushi.mp3' },
+    { id: 'umaoi',        name: 'うまおい',   image: 'images/insects/umaoi.png',        sound: 'sounds/umaoi.mp3'        },
+];
+
+// 楽器リスト（4種類）
+const instrumentsData = [
+    { id: 'suzu',       name: 'すず',          image: 'images/instruments/suzu.png'       },
+    { id: 'tambourine', name: 'タンブリン',    image: 'images/instruments/tambourine.png' },
+    { id: 'triangle',   name: 'トライアングル', image: 'images/instruments/triangle.png'   },
+    { id: 'clap',       name: 'て（クラップ）', image: 'images/instruments/clap.png'       },
+];
+
+// 全体楽曲ファイルパス
+const songAudioPath = 'sounds/song.mp3';
+
+// タイムライン同期設定（曲の秒数に合わせて歌詞画像と対象楽器を切り替え）
+const songTimeline = [
+    {
+        name: '前奏（はじまるよ）',
+        startTime: 0.0,
+        endTime: 12.5,
+        image: 'images/lyrics/1.png',
+        fallbackText: '🎵 むしのこえ\n\nもうすぐ はじまるよ！\nがっきを じゅんびしてね',
+        insectId: null,
+    },
+    {
+        name: 'あれ まつむしが ないている',
+        startTime: 12.5,
+        endTime: 22.5,
+        image: 'images/lyrics/1.png',
+        fallbackText: 'あれ まつむしが ないている\nちんちろ ちんちろ ちんちろりん',
+        insectId: 'matsumushi',
+    },
+    {
+        name: 'あれ すずむしも なきだした',
+        startTime: 22.5,
+        endTime: 33.5,
+        image: 'images/lyrics/2.png',
+        fallbackText: 'あれ すずむしも なきだした\nりんりん りんりん りんりーん',
+        insectId: 'suzumushi',
+    },
+    {
+        name: 'あきの よながを なきとおす（1番）',
+        startTime: 33.5,
+        endTime: 46.5,
+        image: 'images/lyrics/3.png',
+        fallbackText: 'あきの よながを なきとおす\nああ おもしろい むしのこえ',
+        insectId: 'ALL',
+    },
+    {
+        name: 'きりきり こおろぎ / がちゃがちゃ くつわむし',
+        startTime: 46.5,
+        endTime: 57.5,
+        image: 'images/lyrics/4.png',
+        fallbackText: 'きりきりきりきり こおろぎや\nがちゃがちゃ がちゃがちゃ くつわむし',
+        insectId: 'kutsuwamushi',
+    },
+    {
+        name: 'あとから うまおい おいづいて',
+        startTime: 57.5,
+        endTime: 67.5,
+        image: 'images/lyrics/5.png',
+        fallbackText: 'あとから うまおい おいづいて\nちょんちょん ちょんちょん すいっちょん',
+        insectId: 'umaoi',
+    },
+    {
+        name: 'あきの よながを なきとおす（2番）',
+        startTime: 67.5,
+        endTime: 82.0,
+        image: 'images/lyrics/6.png',
+        fallbackText: 'あきの よながを なきとおす\nああ おもしろい むしのこえ',
+        insectId: 'ALL',
+    },
+    {
+        name: 'おわり（じょうずに できたね！）',
+        startTime: 82.0,
+        endTime: 999.0,
+        image: 'images/lyrics/6.png',
+        fallbackText: '✨ たいへん よくできました！ ✨\n\nたのしく えんそう できたね！',
+        insectId: null,
+    }
+];
+
+/* ================================================================
+ *  アプリケーションステート
+ * ================================================================ */
+
+const state = {
+    page: 'select',
+    mode: 'drag',
+    selectedInsectId: null,
+    placements: {},
+    currentInsectAudio: null,
+    playingInsectId: null,
+    songAudio: null,
+    isPlayingSong: false,
+    currentSpeed: 1.0,
+    activeTimelineIndex: -1,
+};
+
+function init() {
+    renderInsects();
+    renderInstruments();
+    setupHeaderListeners();
+    setupPageNavigation();
+    setupSongControls();
+    updateModeUI();
+}
+
+function renderInsects() {
+    const container = document.getElementById('insects-container');
+    container.innerHTML = '';
+    insectsData.forEach(insect => {
+        const card = document.createElement('div');
+        card.className = 'insect-card';
+        card.id = 'insect-card-' + insect.id;
+
+        const imgArea = document.createElement('div');
+        imgArea.className = 'insect-img-area';
+        imgArea.addEventListener('click', () => playInsectSound(insect));
+        imgArea.addEventListener('touchend', e => { e.preventDefault(); playInsectSound(insect); });
+
+        const img = document.createElement('img');
+        img.className = 'insect-img';
+        img.src = insect.image;
+        img.alt = insect.name;
+        img.onerror = () => { img.src = 'https://placehold.co/300x300/95d5b2/1b4332?text=' + encodeURIComponent(insect.name); };
+
+        const soundBtn = document.createElement('div');
+        soundBtn.className = 'sound-btn';
+        soundBtn.innerHTML = '🔊 なきごえ';
+
+        imgArea.appendChild(img);
+        imgArea.appendChild(soundBtn);
+
+        const nameLabel = document.createElement('div');
+        nameLabel.className = 'insect-name';
+        nameLabel.textContent = insect.name;
+
+        const dz = document.createElement('div');
+        dz.className = 'dropzone';
+        dz.id = 'dropzone-' + insect.id;
+        dz.dataset.insectId = insect.id;
+        dz.addEventListener('click', () => {
+            if (state.mode === 'tap') { state.selectedInsectId = insect.id; updateSelectionUI(); }
+        });
+        dz.addEventListener('touchend', e => {
+            if (state.mode === 'tap') { e.preventDefault(); state.selectedInsectId = insect.id; updateSelectionUI(); }
+        });
+
+        card.appendChild(imgArea);
+        card.appendChild(nameLabel);
+        card.appendChild(dz);
+        container.appendChild(card);
+    });
+    updatePlacementsUI();
+}
+
+function renderInstruments() {
+    const container = document.getElementById('instruments-container');
+    container.innerHTML = '';
+    instrumentsData.forEach(inst => {
+        const card = document.createElement('div');
+        card.className = 'instrument-card' + (state.mode === 'tap' ? ' tap-mode' : '');
+        card.dataset.instId = inst.id;
+
+        const img = document.createElement('img');
+        img.className = 'instrument-img';
+        img.src = inst.image;
+        img.alt = inst.name;
+        img.onerror = () => { img.src = 'https://placehold.co/200x200/ffe08a/5a3e00?text=' + encodeURIComponent(inst.name); };
+
+        const name = document.createElement('div');
+        name.className = 'instrument-name';
+        name.textContent = inst.name;
+
+        card.appendChild(img);
+        card.appendChild(name);
+
+        if (state.mode === 'drag') {
+            card.addEventListener('pointerdown', e => handlePointerDown(e, inst));
+        } else {
+            const doPlace = () => {
+                if (!state.selectedInsectId) { showTapGuide(); return; }
+                placeInstrument(state.selectedInsectId, inst.id);
+                state.selectedInsectId = null;
+                updateSelectionUI();
+            };
+            card.addEventListener('click', doPlace);
+            card.addEventListener('touchend', e => { e.preventDefault(); doPlace(); });
+        }
+        container.appendChild(card);
+    });
+}
+
+function playInsectSound(insect) {
+    if (state.currentInsectAudio) { state.currentInsectAudio.pause(); state.currentInsectAudio = null; }
+    if (state.playingInsectId) {
+        const prev = document.getElementById('insect-card-' + state.playingInsectId);
+        if (prev) prev.classList.remove('playing');
+    }
+    const card = document.getElementById('insect-card-' + insect.id);
+    if (card) card.classList.add('playing');
+    state.playingInsectId = insect.id;
+
+    const audio = new Audio(insect.sound);
+    state.currentInsectAudio = audio;
+    audio.play().catch(() => playSynthSound());
+    const stop = () => {
+        if (card) card.classList.remove('playing');
+        state.playingInsectId = null;
+        state.currentInsectAudio = null;
+    };
+    audio.onended = stop;
+    audio.onerror = () => { stop(); playSynthSound(); };
+}
+
+function playSynthSound() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1400, ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(900, ctx.currentTime + 0.8);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.9);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(); osc.stop(ctx.currentTime + 0.9);
+    } catch(e) {}
+}
+
+function placeInstrument(insectId, instrumentId) {
+    state.placements[insectId] = instrumentId;
+    updatePlacementsUI(insectId);
+}
+
+function updatePlacementsUI(animateId) {
+    insectsData.forEach(insect => {
+        const dz = document.getElementById('dropzone-' + insect.id);
+        if (!dz) return;
+        const placedId = state.placements[insect.id];
+        dz.innerHTML = '';
+        if (placedId) {
+            const inst = instrumentsData.find(i => i.id === placedId);
+            if (inst) {
+                dz.classList.add('has-item');
+                const img = document.createElement('img');
+                img.className = 'placed-img' + (insect.id === animateId ? ' bounce' : '');
+                img.src = inst.image;
+                img.alt = inst.name;
+                img.onerror = () => { img.src = 'https://placehold.co/200x200/ffe08a/5a3e00?text=' + encodeURIComponent(inst.name); };
+                dz.appendChild(img);
+            }
+        } else {
+            dz.classList.remove('has-item');
+            const ph = document.createElement('div');
+            ph.className = 'drop-placeholder';
+            ph.textContent = '+';
+            dz.appendChild(ph);
+        }
+    });
+}
+
+function updateSelectionUI() {
+    insectsData.forEach(insect => {
+        const dz = document.getElementById('dropzone-' + insect.id);
+        if (!dz) return;
+        if (state.mode === 'tap' && insect.id === state.selectedInsectId) {
+            dz.classList.add('selected');
+        } else {
+            dz.classList.remove('selected');
+        }
+    });
+}
+
+let _guideTimer = null;
+function showTapGuide() {
+    const tapGuide = document.getElementById('tap-guide');
+    tapGuide.style.display = 'block';
+    clearTimeout(_guideTimer);
+    _guideTimer = setTimeout(() => { tapGuide.style.display = 'none'; }, 1800);
+}
+
+function updateModeUI() {
+    const isDrag = state.mode === 'drag';
+    document.getElementById('btn-mode-drag').classList.toggle('active', isDrag);
+    document.getElementById('btn-mode-tap').classList.toggle('active', !isDrag);
+    document.getElementById('palette-message').textContent = isDrag
+        ? 'がっき を ゆびで おさえて、むし の した に はこぼう！'
+        : 'むし の わく を タップしてから、おきたい がっき を タップしよう！';
+    renderInstruments();
+    if (isDrag) { state.selectedInsectId = null; updateSelectionUI(); document.getElementById('tap-guide').style.display = 'none'; }
+}
+
+function setupHeaderListeners() {
+    document.getElementById('btn-mode-drag').addEventListener('click', () => { if (state.mode !== 'drag') { state.mode = 'drag'; updateModeUI(); } });
+    document.getElementById('btn-mode-tap').addEventListener('click',  () => { if (state.mode !== 'tap')  { state.mode = 'tap';  updateModeUI(); } });
+    document.getElementById('btn-reset').addEventListener('click', () => {
+        state.placements = {}; state.selectedInsectId = null;
+        updatePlacementsUI(); updateSelectionUI();
+    });
+}
+
+let _clone = null, _dragging = null, _offX = 0, _offY = 0;
+function handlePointerDown(e, instrument) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault();
+    const src  = e.currentTarget;
+    const rect = src.getBoundingClientRect();
+    _offX = e.clientX - rect.left;
+    _offY = e.clientY - rect.top;
+
+    _clone = src.cloneNode(true);
+    Object.assign(_clone.style, {
+        position: 'fixed', left: (e.clientX - _offX) + 'px', top: (e.clientY - _offY) + 'px',
+        width: rect.width + 'px', height: rect.height + 'px', zIndex: '9999',
+        opacity: '0.92', transform: 'scale(1.1) rotate(2deg)', pointerEvents: 'none',
+        boxShadow: '0 12px 32px rgba(0,0,0,0.25)', borderRadius: '16px', background: '#fff',
+    });
+    document.body.appendChild(_clone);
+    _dragging = instrument;
+
+    document.querySelectorAll('.dropzone').forEach(dz => dz.classList.add('highlight'));
+    document.addEventListener('pointermove',   handlePointerMove, { passive: false });
+    document.addEventListener('pointerup',     handlePointerUp);
+    document.addEventListener('pointercancel', handlePointerUp);
+}
+function handlePointerMove(e) {
+    if (!_clone) return;
+    e.preventDefault();
+    _clone.style.left = (e.clientX - _offX) + 'px';
+    _clone.style.top  = (e.clientY - _offY) + 'px';
+}
+function handlePointerUp(e) {
+    document.removeEventListener('pointermove',   handlePointerMove);
+    document.removeEventListener('pointerup',     handlePointerUp);
+    document.removeEventListener('pointercancel', handlePointerUp);
+    document.querySelectorAll('.dropzone').forEach(dz => dz.classList.remove('highlight'));
+
+    if (_clone) {
+        _clone.style.display = 'none';
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        _clone.style.display = '';
+        const dz = el ? el.closest('.dropzone') : null;
+        if (dz && _dragging) placeInstrument(dz.dataset.insectId, _dragging.id);
+        _clone.remove(); _clone = null; _dragging = null;
+    }
+}
+
+function setupPageNavigation() {
+    const pageSelect = document.getElementById('page-select');
+    const pagePlay   = document.getElementById('page-play');
+
+    document.getElementById('btn-to-play').addEventListener('click', () => {
+        if (state.currentInsectAudio) { state.currentInsectAudio.pause(); }
+        pageSelect.classList.remove('active');
+        pagePlay.classList.add('active');
+        state.page = 'play';
+        updatePlayView(0);
+    });
+
+    document.getElementById('btn-back-to-select').addEventListener('click', () => {
+        pauseSong();
+        pagePlay.classList.remove('active');
+        pageSelect.classList.add('active');
+        state.page = 'select';
+    });
+}
+
+function setupSongControls() {
+    state.songAudio = new Audio(songAudioPath);
+    state.songAudio.preload = 'auto';
+
+    const btnPlayPause = document.getElementById('btn-play-pause');
+    const btnRestart   = document.getElementById('btn-play-restart');
+
+    btnPlayPause.addEventListener('click', () => {
+        if (state.isPlayingSong) {
+            pauseSong();
+        } else {
+            playSong();
+        }
+    });
+
+    btnRestart.addEventListener('click', () => {
+        state.songAudio.currentTime = 0;
+        updatePlayView(0);
+        playSong();
+    });
+
+    document.querySelectorAll('.speed-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const speed = parseFloat(btn.dataset.speed);
+            state.currentSpeed = speed;
+            if (state.songAudio) {
+                state.songAudio.playbackRate = speed;
+            }
+            document.getElementById('phrase-badge-speed').textContent = `はやさ: ${speed}倍`;
+        });
+    });
+
+    const progContainer = document.getElementById('progress-container');
+    progContainer.addEventListener('click', e => {
+        if (!state.songAudio.duration) return;
+        const rect = progContainer.getBoundingClientRect();
+        const clickRatio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        state.songAudio.currentTime = clickRatio * state.songAudio.duration;
+        updatePlayView(state.songAudio.currentTime);
+    });
+
+    state.songAudio.addEventListener('timeupdate', () => {
+        updatePlayView(state.songAudio.currentTime);
+    });
+
+    state.songAudio.addEventListener('ended', () => {
+        pauseSong();
+        updatePlayView(state.songAudio.duration || 999);
+    });
+}
+
+function playSong() {
+    if (!state.songAudio) return;
+    state.songAudio.playbackRate = state.currentSpeed;
+    state.songAudio.play().then(() => {
+        state.isPlayingSong = true;
+        const btn = document.getElementById('btn-play-pause');
+        btn.textContent = '⏸️ いちじ停止';
+        btn.classList.add('is-playing');
+    }).catch(err => {
+        console.log('Audio play blocked/error:', err);
+    });
+}
+
+function pauseSong() {
+    if (!state.songAudio) return;
+    state.songAudio.pause();
+    state.isPlayingSong = false;
+    const btn = document.getElementById('btn-play-pause');
+    btn.textContent = '▶️ さいせい';
+    btn.classList.remove('is-playing');
+    document.getElementById('active-inst-badge').classList.remove('is-playing-beat');
+}
+
+function updatePlayView(currentTime) {
+    const duration = state.songAudio.duration || 93;
+    const progressPercent = Math.min(100, (currentTime / duration) * 100);
+    document.getElementById('play-progress-fill').style.width = progressPercent + '%';
+
+    document.getElementById('current-time-display').textContent = formatTime(currentTime);
+    document.getElementById('total-time-display').textContent = formatTime(duration);
+
+    let currentItem = songTimeline.find(item => currentTime >= item.startTime && currentTime < item.endTime);
+    if (!currentItem) {
+        currentItem = songTimeline[songTimeline.length - 1];
+    }
+
+    document.getElementById('phrase-badge-title').textContent = currentItem.name;
+    document.getElementById('phrase-current-name').textContent = currentItem.name;
+
+    const lyricsImg = document.getElementById('lyrics-image');
+    const lyricsFallback = document.getElementById('lyrics-fallback-text');
+
+    if (currentItem.image) {
+        lyricsImg.src = currentItem.image;
+        lyricsImg.style.display = 'block';
+        lyricsFallback.style.display = 'none';
+        lyricsImg.onerror = () => {
+            lyricsImg.style.display = 'none';
+            lyricsFallback.style.display = 'block';
+            lyricsFallback.textContent = currentItem.fallbackText;
+        };
+    } else {
+        lyricsImg.style.display = 'none';
+        lyricsFallback.style.display = 'block';
+        lyricsFallback.textContent = currentItem.fallbackText;
+    }
+
+    updateActiveInstrumentDisplay(currentItem.insectId);
+}
+
+function updateActiveInstrumentDisplay(insectId) {
+    const singleBadge = document.getElementById('active-inst-badge');
+    const allBadge    = document.getElementById('active-all-instruments');
+    const activeImg   = document.getElementById('active-inst-img');
+    const activeName  = document.getElementById('active-inst-name');
+    const activeSub   = document.getElementById('active-inst-subtext');
+
+    if (!insectId) {
+        singleBadge.style.display = 'flex';
+        allBadge.style.display = 'none';
+        singleBadge.classList.remove('is-playing-beat');
+        activeImg.src = 'images/instruments/suzu.png';
+        activeImg.style.opacity = '0.3';
+        activeName.textContent = 'じゅんび';
+        activeSub.textContent = 'もうすぐ ならすよ！';
+        return;
+    }
+
+    if (insectId === 'ALL') {
+        singleBadge.style.display = 'none';
+        allBadge.style.display = 'flex';
+        allBadge.innerHTML = '<div style="font-size:1.1rem;font-weight:900;color:#e76f51;margin-bottom:4px;">🌟 みんなで えんそう！</div>';
+
+        insectsData.forEach(insect => {
+            const placedInstId = state.placements[insect.id];
+            const inst = instrumentsData.find(i => i.id === placedInstId);
+            const row = document.createElement('div');
+            row.className = 'all-inst-item';
+            if (inst) {
+                row.innerHTML = `<img src="${inst.image}" alt="${inst.name}" onerror="this.src='https://placehold.co/100x100?text=がっき'"> <span>${insect.name}: <strong>${inst.name}</strong></span>`;
+            } else {
+                row.innerHTML = `<span style="color:#aaa;">${insect.name}: (えらんでない)</span>`;
+            }
+            allBadge.appendChild(row);
+        });
+        return;
+    }
+
+    singleBadge.style.display = 'flex';
+    allBadge.style.display = 'none';
+    if (state.isPlayingSong) {
+        singleBadge.classList.add('is-playing-beat');
+    } else {
+        singleBadge.classList.remove('is-playing-beat');
+    }
+
+    const targetInsect = insectsData.find(i => i.id === insectId);
+    const placedInstId = state.placements[insectId];
+    const placedInst   = instrumentsData.find(i => i.id === placedInstId);
+
+    if (placedInst) {
+        activeImg.src = placedInst.image;
+        activeImg.style.opacity = '1';
+        activeImg.onerror = () => { activeImg.src = 'https://placehold.co/200x200/ffe08a/5a3e00?text=' + encodeURIComponent(placedInst.name); };
+        activeName.textContent = placedInst.name;
+        activeSub.textContent = `【${targetInsect ? targetInsect.name : ''}】の ばん だよ！`;
+    } else {
+        activeImg.src = 'images/instruments/suzu.png';
+        activeImg.style.opacity = '0.3';
+        activeName.textContent = '（がっき未選択）';
+        activeSub.textContent = `【${targetInsect ? targetInsect.name : ''}】のがっきを えらぼう！`;
+    }
+}
+
+function formatTime(sec) {
+    const s = Math.floor(sec || 0);
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return `${m}:${r < 10 ? '0' : ''}${r}`;
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
