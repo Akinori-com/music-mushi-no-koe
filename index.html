@@ -162,17 +162,17 @@
             font-weight: 700; color: #7c4a00; margin-bottom: 6px;
         }
         #instruments-container {
-            display: flex; overflow-x: auto; gap: 14px; padding: 2px 4px 4px;
-            justify-content: center; align-items: flex-end;
-            scrollbar-width: none; -ms-overflow-style: none;
+            display: flex; gap: clamp(6px, 1.2vw, 12px); padding: 4px 6px;
+            justify-content: center; align-items: stretch;
+            width: 100%; max-width: 1100px; margin: 0 auto;
+            overflow: hidden;
         }
         .instrument-card {
-            background: #fff; border: 3px solid #ffe08a; border-radius: 16px;
+            background: #fff; border: 3px solid #ffe08a; border-radius: 14px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.09);
-            display: flex; flex-direction: column; align-items: center;
-            padding: 8px 8px 6px; flex-shrink: 0;
-            width: clamp(110px, 16vw, 150px);
-            height: clamp(120px, 16vw, 150px);
+            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+            padding: 6px 4px 4px; flex: 1 1 0; min-width: 0; max-width: 135px;
+            height: clamp(100px, 15vh, 135px);
             cursor: grab; transition: transform 0.15s, box-shadow 0.15s;
             -webkit-tap-highlight-color: transparent;
         }
@@ -183,9 +183,10 @@
             object-fit: contain; pointer-events: none; display: block;
         }
         .instrument-name {
-            font-size: clamp(0.8rem, 1.8vw, 0.95rem); font-weight: 700; color: #5a3e00;
-            text-align: center; margin-top: 4px; pointer-events: none;
-            white-space: pre-line; line-height: 1.2; flex-shrink: 0;
+            font-size: clamp(0.68rem, 1.3vw, 0.85rem); font-weight: 700; color: #5a3e00;
+            text-align: center; margin-top: 3px; pointer-events: none;
+            white-space: pre-line; line-height: 1.15; flex-shrink: 0;
+            word-break: keep-all;
         }
 
         /* ---- ページ2: 演奏画面 ---- */
@@ -439,12 +440,15 @@ const insectsData = [
     { id: 'umaoi',        name: 'うまおい',   image: 'images/insects/umaoi.png',        sound: 'sounds/umaoi.mp3'        },
 ];
 
-// 楽器リスト（4種類）
+// 楽器リスト（7種類）
 const instrumentsData = [
-    { id: 'suzu',       name: 'すず',          image: 'images/instruments/suzu.png'       },
-    { id: 'tambourine', name: 'タンブリン',    image: 'images/instruments/tambourine.png' },
-    { id: 'triangle',   name: 'トライアングル', image: 'images/instruments/triangle.png'   },
-    { id: 'clap',       name: 'て（クラップ）', image: 'images/instruments/clap.png'       },
+    { id: 'suzu',         name: 'すず',             image: 'images/instruments/suzu.png'         },
+    { id: 'tambourine',   name: 'タンブリン',       image: 'images/instruments/tambourine.png'   },
+    { id: 'triangle',     name: 'トライアングル',   image: 'images/instruments/triangle.png'     },
+    { id: 'clap',         name: 'て（クラップ）',   image: 'images/instruments/clap.png'         },
+    { id: 'maracas',      name: 'マラカス',         image: 'images/instruments/maracas.png'      },
+    { id: 'castanet',     name: 'カスタネット',     image: 'images/instruments/castanet.png'     },
+    { id: 'lollipopdrum', name: 'ロリポップ\nドラム', image: 'images/instruments/lollipopdrum.png' },
 ];
 
 // 全体楽曲ファイルパス
@@ -805,14 +809,67 @@ function setupPageNavigation() {
     });
 }
 
+let _audioCtx = null;
+let _gainNode = null;
+let _sourceNode = null;
+let _audioBuffer = null;
+let _startTime = 0;
+let _pausedAt = 0;
+let _isWebAudioPlaying = false;
+
+const SONG_VOLUME_MULTIPLIER = 2.0; // 200%音量（2.0倍）
+
+function initWebAudio() {
+    try {
+        if (!_audioCtx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            _audioCtx = new AudioCtx();
+            
+            // 200%音量ゲイン
+            _gainNode = _audioCtx.createGain();
+            _gainNode.gain.value = SONG_VOLUME_MULTIPLIER;
+
+            // 2倍音量時の音割れ防止コンプレッサー
+            const compressor = _audioCtx.createDynamicsCompressor();
+            compressor.threshold.setValueAtTime(-6, _audioCtx.currentTime);
+            compressor.knee.setValueAtTime(10, _audioCtx.currentTime);
+            compressor.ratio.setValueAtTime(12, _audioCtx.currentTime);
+            compressor.attack.setValueAtTime(0.003, _audioCtx.currentTime);
+            compressor.release.setValueAtTime(0.25, _audioCtx.currentTime);
+
+            _gainNode.connect(compressor);
+            compressor.connect(_audioCtx.destination);
+        }
+        if (_audioCtx.state === 'suspended') {
+            _audioCtx.resume();
+        }
+        if (!_audioBuffer && typeof fetch !== 'undefined') {
+            fetch(songAudioPath)
+                .then(res => res.arrayBuffer())
+                .then(buf => _audioCtx.decodeAudioData(buf))
+                .then(decoded => {
+                    _audioBuffer = decoded;
+                })
+                .catch(err => {
+                    console.log('WebAudio buffer load fallback to standard Audio element:', err);
+                });
+        }
+    } catch(e) {
+        console.log('WebAudio init fallback:', e);
+    }
+}
+
 function setupSongControls() {
     state.songAudio = new Audio(songAudioPath);
     state.songAudio.preload = 'auto';
+
+    initWebAudio();
 
     const btnPlayPause = document.getElementById('btn-play-pause');
     const btnRestart   = document.getElementById('btn-play-restart');
 
     btnPlayPause.addEventListener('click', () => {
+        initWebAudio();
         if (state.isPlayingSong) {
             pauseSong();
         } else {
@@ -821,6 +878,8 @@ function setupSongControls() {
     });
 
     btnRestart.addEventListener('click', () => {
+        initWebAudio();
+        _pausedAt = 0;
         state.songAudio.currentTime = 0;
         updatePlayView(0);
         playSong();
@@ -835,6 +894,9 @@ function setupSongControls() {
             if (state.songAudio) {
                 state.songAudio.playbackRate = speed;
             }
+            if (_sourceNode && _isWebAudioPlaying) {
+                _sourceNode.playbackRate.setValueAtTime(speed, _audioCtx.currentTime);
+            }
             document.getElementById('phrase-badge-speed').textContent = `はやさ: ${speed}倍`;
         });
     });
@@ -844,8 +906,13 @@ function setupSongControls() {
         if (!state.songAudio.duration) return;
         const rect = progContainer.getBoundingClientRect();
         const clickRatio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        state.songAudio.currentTime = clickRatio * state.songAudio.duration;
-        updatePlayView(state.songAudio.currentTime);
+        const newTime = clickRatio * state.songAudio.duration;
+        _pausedAt = newTime;
+        state.songAudio.currentTime = newTime;
+        updatePlayView(newTime);
+        if (state.isPlayingSong) {
+            playSong();
+        }
     });
 
     state.songAudio.addEventListener('timeupdate', () => {
@@ -859,21 +926,51 @@ function setupSongControls() {
 }
 
 function playSong() {
-    if (!state.songAudio) return;
-    state.songAudio.playbackRate = state.currentSpeed;
-    state.songAudio.play().then(() => {
-        state.isPlayingSong = true;
-        const btn = document.getElementById('btn-play-pause');
-        btn.textContent = '⏸️ いちじ停止';
-        btn.classList.add('is-playing');
-    }).catch(err => {
-        console.log('Audio play blocked/error:', err);
-    });
+    initWebAudio();
+    
+    if (_audioCtx && _audioBuffer) {
+        // 150% 大音量 Web Audio 再生
+        if (_sourceNode) {
+            try { _sourceNode.stop(); } catch(e) {}
+            _sourceNode.disconnect();
+        }
+        _sourceNode = _audioCtx.createBufferSource();
+        _sourceNode.buffer = _audioBuffer;
+        _sourceNode.playbackRate.value = state.currentSpeed;
+        _sourceNode.connect(_gainNode);
+
+        const offset = state.songAudio.currentTime || 0;
+        _sourceNode.start(0, offset);
+        _startTime = _audioCtx.currentTime - (offset / state.currentSpeed);
+        _isWebAudioPlaying = true;
+
+        // 同期用Audio（ミュート）
+        state.songAudio.volume = 0;
+        state.songAudio.playbackRate = state.currentSpeed;
+        state.songAudio.play().catch(() => {});
+    } else {
+        // 通常フォールバック再生
+        state.songAudio.volume = 1.0;
+        state.songAudio.playbackRate = state.currentSpeed;
+        state.songAudio.play().catch(err => console.log('Audio error:', err));
+    }
+
+    state.isPlayingSong = true;
+    const btn = document.getElementById('btn-play-pause');
+    btn.textContent = '⏸️ いちじ停止';
+    btn.classList.add('is-playing');
 }
 
 function pauseSong() {
-    if (!state.songAudio) return;
-    state.songAudio.pause();
+    if (_sourceNode && _isWebAudioPlaying) {
+        try { _sourceNode.stop(); } catch(e) {}
+        _sourceNode.disconnect();
+        _sourceNode = null;
+        _isWebAudioPlaying = false;
+    }
+    if (state.songAudio) {
+        state.songAudio.pause();
+    }
     state.isPlayingSong = false;
     const btn = document.getElementById('btn-play-pause');
     btn.textContent = '▶️ さいせい';

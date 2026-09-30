@@ -16,6 +16,9 @@ images/
     tambourine.png
     triangle.png
     clap.png
+    maracas.png
+    castanet.png
+    lollipopdrum.png
   lyrics/                ← 歌詞スライド画像を置くフォルダ
     1.png                ← まつむし（ちんちろりん）
     2.png                ← すずむし（りんりーん）
